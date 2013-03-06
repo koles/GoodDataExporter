@@ -8,7 +8,7 @@ require 'logger'
 class GdcRestApiIterator
 
   def initialize()
-      @accepted_categories = ['projectDashboard','report','reportDefinition','metric']
+      @accepted_categories = ['projectDashboard','report','reportDefinition','metric', 'prompt']
       @processed_identifiers = []
       @content_by_identifier = {}
       @identifier_to_uri = {}
@@ -70,6 +70,10 @@ class GdcRestApiIterator
 
   def save_elements_to_file (name, content, out_dir)
     File.open(out_dir+'/'+name+'.el','w') { |f| f.puts content}
+  end
+
+  def save_variables_to_file (name, content, out_dir)
+    File.open(out_dir+'/'+name+'.var','w') { |f| f.puts content}
   end
 
   # strips enclosing '"', ']', and '[' from uri
