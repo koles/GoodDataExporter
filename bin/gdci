@@ -39,7 +39,17 @@ primary_labels = {}
 opts.each do |opt, arg|
   case opt
     when '--help'
-      puts "gdi.rb [options]
+      puts "gdi.rb [options] command objects
+
+Commands:
+
+show-multiple-labels - lists all attributes with multiple labels
+
+export - exports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+import - imports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+Options:
 
 -h, --help:
    show help
@@ -87,6 +97,13 @@ opts.each do |opt, arg|
   end
 end
 
+command =  ARGV.shift
+identifiers = []
+
+if(['import', 'export'].include? command)
+  identifiers = eval(ARGV.shift)
+end
+
 o = options
 
 if out_dir.nil? or out_dir.size <= 0
@@ -116,7 +133,7 @@ if password.nil? or password.size <= 0
   end
 end
 
-if source_project.nil? or source_project.size <= 0
+if (command.eql?('export') or command.eql?('show-multiple-labels')) and (source_project.nil? or source_project.size <= 0)
   puts "INFO: Parameter --source not specified. Looking in config file."
   source_project = o['source']
   if source_project.nil? or source_project.size <= 0
@@ -125,7 +142,7 @@ if source_project.nil? or source_project.size <= 0
   end
 end
 
-if target_project.nil? or target_project.size <= 0
+if (command.eql?('import')) and (target_project.nil? or target_project.size <= 0)
   puts "INFO: Parameter --target not specified. Looking in config file."
   target_project = o['target']
   if target_project.nil? or target_project.size <= 0
@@ -142,13 +159,34 @@ if primary_labels.nil? or primary_labels.size <= 0
   end
 end
 
-command =  ARGV.shift
+GoodData::connect(username, password)
 
-identifiers = eval(ARGV.shift)
+case command
+  when 'show-multiple-labels'
+    GoodData.project = source_project
+    exporter = GdcExporter.new(primary_labels)
+    attributes = exporter.attributes_with_multiple_labels(source_project)
+    attributes.each {
+      |key,values|
+      puts "#{key}:"
+      values.each {
+        |v|
+        puts "  #{v}"
+      }
+    }
+  when 'export'
+    GoodData.project = source_project
+    exporter = GdcExporter.new(primary_labels)
+    exporter.export(source_project, identifiers, out_dir)
+  when 'import'
+    GoodData.project = target_project
+    importer = GdcImporter.new(primary_labels)
+    importer.importer(target_project, identifiers, out_dir)
+  else
+    puts "Unknown command #{command}! Use --help to list the available commands."
+end
 
-puts "#{command}: #{identifiers}"
 
-#GoodData::connect(c['username'], c['password'])
 
 
 
