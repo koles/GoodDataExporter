@@ -8,4 +8,5 @@ Gem::Specification.new do |s|
   s.email       = 'zsvoboda@gmail.com'
   s.files       = ["lib/gooddata_exporter.rb"]
   s.homepage    = 'https://github.com/zsvoboda/GoodDataExporter'
+  s.executables << 'gdci'
 end
