@@ -16,6 +16,7 @@ class GdcRestApiIterator
     @saved_identifiers = []
     @element_uris = []
     @primary_labels = {}
+    @objects_by_element_uri = {}
   end
 
   def attributes_with_multiple_labels(pid)
@@ -33,6 +34,17 @@ class GdcRestApiIterator
     return attributes_with_multiple_labels
   end
 
+  def metric_identifiers(pid)
+    metrics = []
+    response = GoodData::get("/gdc/md/#{pid}/query/metrics")
+    response['query']['entries'].each {
+      |m|
+      uri = m['link']
+      identifier = identifier(uri)
+      metrics += [identifier]
+    }
+    return metrics
+  end
 
   protected
 
@@ -125,6 +137,11 @@ class GdcRestApiIterator
     return "#{label_uri}/elements"
   end
 
+  def label_attribute(label_identifier)
+    label = content(label_identifier)
+    return identifier(label['attributeDisplayForm']['content']['formOf'])
+  end
+
   # returns label value for a specified id
   def label_element_value (identifier, id)
     elements_uri = label_elements_uri(identifier)
@@ -132,7 +149,8 @@ class GdcRestApiIterator
     if !(response['attributeElements']['elements'].empty?)
       return response['attributeElements']['elements'][0]['title']
     else
-      puts "WARNING: label #{label_identifier} doesn't contain element id=#{id}"
+      puts "WARNING: label #{identifier} doesn't contain element id=#{id}."
+      puts "Grep the output directory for '%element%#{label_attribute(identifier)}%#{id}%' to find all objects that contains the invalid IDs."
     end
   end
 
@@ -142,7 +160,6 @@ class GdcRestApiIterator
     elements_uri = label_elements_uri(identifier)
     response = GoodData::get(elements_uri)
     label_uri = response['attributeElements']['elementsMeta']['attributeDisplayForm']
-    label_identifier = identifier(label_uri)
     if !(response['attributeElements']['elements'].empty?)
       values = response['attributeElements']['elements']
       values.each {
@@ -151,7 +168,7 @@ class GdcRestApiIterator
         value_to_uri[pair['title']] = uri.gsub(/^.*?\?id=/,'')
       }
     else
-      puts "WARNING: label #{label_identifier} doesn't contain any elements"
+      puts "WARNING: label #{identifier} doesn't contain any elements"
     end
     return value_to_uri
   end
@@ -175,7 +192,7 @@ class GdcRestApiIterator
   end
 
   attr_accessor :identifier_to_uri , :uri_to_identifier, :content_by_identifier, :processed_identifiers,
-                :saved_identifiers, :element_uris, :accepted_categories, :primary_labels
+                :saved_identifiers, :element_uris, :accepted_categories, :primary_labels, :objects_by_element_uri
 
 end
 
@@ -224,9 +241,9 @@ class GdcExporter < GdcRestApiIterator
     element_uris = element_uris.uniq
     element_uris.each {
         |eu|
-      @element_uris += [strip_enclosing_chars_from_element_uri(eu)]
-      json = json.gsub(strip_enclosing_chars_from_element_uri(eu),
-                       "%element%#{identifier_id_pair_from_element_uri(pid, eu).join(',')}%")
+      eus = strip_enclosing_chars_from_element_uri(eu)
+      @element_uris += [eus]
+      json = json.gsub(eus, "%element%#{identifier_id_pair_from_element_uri(pid, eu).join(',')}%")
     }
     return json
   end
@@ -296,6 +313,66 @@ class GdcExporter < GdcRestApiIterator
       end
     }
     save_elements_to_file('used_elements', element_values.to_json, out_dir)
+  end
+
+end
+
+class GdcEraser < GdcExporter
+
+  def initialize ()
+    super({})
+  end
+
+  def replace_uris(pid, json)
+    uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+["|\]]/)
+    uris = uris.uniq
+    uris.each {
+        |uri|
+      stripped_uri = strip_enclosing_chars_from_element_uri(uri)
+      id = identifier(stripped_uri)
+      json = json.gsub(stripped_uri, "%identifier%#{id}%")
+      if !(@processed_identifiers.include? id)
+        drop_object(pid, id)
+      end
+    }
+    return json
+  end
+
+  def drop_all_metrics(pid)
+    drop(pid, metric_identifiers(pid))
+  end
+
+  def drop(pid, identifiers)
+    identifiers.each {
+      |i|
+      drop_object(pid, i)
+    }
+  end
+
+  def drop_object(pid, identifier)
+    begin
+      @processed_identifiers += [identifier]
+      content = content(identifier)
+      category = content.keys.first
+      puts "Inspecting #{identifier} - #{category}"
+      uri = content[category]['meta']['uri']
+      usedby = GoodData::get(uri.gsub('/obj/','/usedby/'))
+      usedby['usedby']['nodes'].each {
+        |node|
+        parent_uri = node['link']
+        parent_category = node['category']
+        if @accepted_categories.include? parent_category
+          parent_identifier = identifier(parent_uri)
+          drop_object(pid, parent_identifier) unless @processed_identifiers.include? parent_identifier
+        end
+      }
+      if @accepted_categories.include? category
+        puts "Deleting #{identifier} - #{category}"
+        GoodData::delete(uri)
+      end
+    rescue
+      puts "The #{category} #{identifier} has been deleted in previous rounds."
+    end
   end
 
 end

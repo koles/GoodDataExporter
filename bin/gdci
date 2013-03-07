@@ -20,6 +20,7 @@ end
 
 opts = GetoptLong.new(
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--overwrite', '-o', GetoptLong::NO_ARGUMENT ],
     [ '--dir', '-d', GetoptLong::OPTIONAL_ARGUMENT ],
     [ '--username', '-u', GetoptLong::OPTIONAL_ARGUMENT ],
     [ '--password', '-p', GetoptLong::OPTIONAL_ARGUMENT ],
@@ -35,6 +36,7 @@ source_project = ""
 target_project = ""
 identifiers = []
 primary_labels = {}
+overwrite = false
 
 opts.each do |opt, arg|
   case opt
@@ -71,6 +73,9 @@ Options:
 --target [target-project], -t [target-project]
   An existing GoodData project where the metadata objects will be stored.
 
+--overwrite, -o
+  Import overwrites existing objects. Default is false.
+
 --labels [attribute-primary-labels], -l [attribute-primary-labels]
   Ruby hash that identifies the primary label for each attribute that has multiple labels. The primary label must
   uniquely identify every attribute element. (e.g. {'attr.user.userid'=>'label.user.userid', 'attr.account.id'=>'label.account.id'}
@@ -82,6 +87,8 @@ Options:
         puts "The output directory #{arg} doesn't exist! Please create it."
         exit 1
       end
+    when '--overwrite'
+      overwrite = true
     when '--username'
       username = arg
     when '--password'
@@ -181,7 +188,7 @@ case command
   when 'import'
     GoodData.project = target_project
     importer = GdcImporter.new(primary_labels)
-    importer.importer(target_project, identifiers, out_dir)
+    importer.import(target_project, identifiers, overwrite, out_dir)
   else
     puts "Unknown command #{command}! Use --help to list the available commands."
 end
