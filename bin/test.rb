@@ -23,6 +23,7 @@ o = options
 GoodData::connect(o['username'], o['password'])
 GoodData.project = 'dph6cw76qy0u3m4im8xmi6lmrlxuejys'
 exporter = GdcEraser.new()
-puts exporter.drop_all_metrics('dph6cw76qy0u3m4im8xmi6lmrlxuejys')
+
+exporter.drop('dph6cw76qy0u3m4im8xmi6lmrlxuejys', ['abeEKiA0aMuF'])
 
 

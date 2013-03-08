@@ -1,0 +1,2 @@
+When overwriting existing folder/dimension/domain the entries are removed. This removes all entries.
+This may delete existing items from the folder.

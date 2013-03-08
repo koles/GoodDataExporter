@@ -8,7 +8,7 @@ require 'logger'
 class GdcRestApiIterator
 
   def initialize()
-    @accepted_categories = ['projectDashboard','report','reportDefinition','metric', 'prompt']
+    @accepted_categories = ['projectDashboard','report','reportDefinition','metric', 'prompt', 'folder', 'dimension', 'domain']
     @processed_identifiers = []
     @content_by_identifier = {}
     @identifier_to_uri = {}
@@ -34,16 +34,44 @@ class GdcRestApiIterator
     return attributes_with_multiple_labels
   end
 
-  def metric_identifiers(pid)
-    metrics = []
-    response = GoodData::get("/gdc/md/#{pid}/query/metrics")
+  def object_identifiers(pid, object_type)
+    objects = []
+    response = GoodData::get("/gdc/md/#{pid}/query/#{object_type}")
     response['query']['entries'].each {
-      |m|
+        |m|
       uri = m['link']
       identifier = identifier(uri)
-      metrics += [identifier]
+      objects += [identifier]
     }
-    return metrics
+    return objects
+  end
+
+  def metric_identifiers(pid)
+    return object_identifiers(pid, "metrics")
+  end
+
+  def attribute_identifiers(pid)
+    return object_identifiers(pid, "attributes")
+  end
+
+  def fact_identifiers(pid)
+    return object_identifiers(pid, "facts")
+  end
+
+  def prompt_identifiers(pid)
+    return object_identifiers(pid, "prompts")
+  end
+
+  def folder_identifiers(pid)
+    return object_identifiers(pid, "folders")
+  end
+
+  def domain_identifiers(pid)
+    return object_identifiers(pid, "domains")
+  end
+
+  def dimension_identifiers(pid)
+    return object_identifiers(pid, "dimensions")
   end
 
   protected
@@ -90,7 +118,7 @@ class GdcRestApiIterator
 
   def save_md_object_to_file(identifier, content, out_dir)
     if !(@saved_identifiers.include? identifier)
-      # puts "Saving #{identifier}"
+      puts "Saving #{identifier}"
       File.open(out_dir+'/'+identifier+'.md','w') { |f| f.puts content}
       @saved_identifiers += [identifier]
     end
@@ -102,14 +130,6 @@ class GdcRestApiIterator
 
   def save_variables_to_file (name, content, out_dir)
     File.open(out_dir+'/'+name+'.var','w') { |f| f.puts content}
-  end
-
-  # strips enclosing '"', ']', and '[' from uri
-  def strip_enclosing_chars_from_element_uri(eu)
-    peu = eu.gsub("\"","")
-    peu = peu.gsub("[","")
-    peu = peu.gsub("]","")
-    return peu
   end
 
   # returns the pair [identifier, id] from a single element uri (/gdc/md/<project>/obj/<obj>/elements?id=<id>)
@@ -150,7 +170,7 @@ class GdcRestApiIterator
       return response['attributeElements']['elements'][0]['title']
     else
       puts "WARNING: label #{identifier} doesn't contain element id=#{id}."
-      puts "Grep the output directory for '%element%#{label_attribute(identifier)}%#{id}%' to find all objects that contains the invalid IDs."
+      puts "Grep the output directory for '%element%#{label_attribute(identifier)},#{id}%' to find all objects that contains the invalid IDs."
     end
   end
 
@@ -221,6 +241,12 @@ class GdcExporter < GdcRestApiIterator
         content[category]['content']['filters'].delete('tree')
       when category.eql?("report")
         content[category]['content']['definitions'] = [content[category]['content']['definitions'].last]
+      when category.eql?("domain")
+        content[category]['content'].delete('entries')
+      when category.eql?("folder")
+        content[category]['content'].delete('entries')
+      when category.eql?("dimension")
+        content[category]['content'].delete('attributes')
       when category.eql?("prompt")
         @prompt_identifiers += [content[category]['meta']['identifier']]
     end
@@ -240,10 +266,11 @@ class GdcExporter < GdcRestApiIterator
     element_uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+\/elements\?id=[0-9]+["|\]]/)
     element_uris = element_uris.uniq
     element_uris.each {
-        |eu|
-      eus = strip_enclosing_chars_from_element_uri(eu)
-      @element_uris += [eus]
-      json = json.gsub(eus, "%element%#{identifier_id_pair_from_element_uri(pid, eu).join(',')}%")
+      |eu|
+      first_char = eu[0]
+      last_char = eu[-1]
+      @element_uris += [strip_enclosing_chars_from_element_uri(eu)]
+      json = json.gsub(eu, "#{first_char}%element%#{identifier_id_pair_from_element_uri(pid, eu).join(',')}%#{last_char}")
     }
     return json
   end
@@ -252,10 +279,12 @@ class GdcExporter < GdcRestApiIterator
     uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+["|\]]/)
     uris = uris.uniq
     uris.each {
-        |uri|
+      |uri|
+      first_char = uri[0]
+      last_char = uri[-1]
       stripped_uri = strip_enclosing_chars_from_element_uri(uri)
       id = identifier(stripped_uri)
-      json = json.gsub(stripped_uri, "%identifier%#{id}%")
+      json = json.gsub(uri, "#{first_char}%identifier%#{id}%#{last_char}")
       if !(@processed_identifiers.include? id)
         export_object(pid, id, out_dir)
       end
@@ -298,6 +327,14 @@ class GdcExporter < GdcRestApiIterator
     save_variables_to_file('variables', variables.to_json, out_dir)
   end
 
+  # strips enclosing '"', ']', and '[' from uri
+  def strip_enclosing_chars_from_element_uri(eu)
+    peu = eu.gsub('"','')
+    peu = peu.gsub('[','')
+    peu = peu.gsub(']','')
+    return peu
+  end
+
   def retrieve_elements(pid, out_dir)
     @element_uris = @element_uris.uniq
     element_values = {}
@@ -338,8 +375,12 @@ class GdcEraser < GdcExporter
     return json
   end
 
+  def drop_all_objects(pid, object_type)
+    drop(pid, object_identifiers(pid, object_type))
+  end
+
   def drop_all_metrics(pid)
-    drop(pid, metric_identifiers(pid))
+    drop_all_objects(pid, "metrics")
   end
 
   def drop(pid, identifiers)
@@ -477,7 +518,8 @@ class GdcImporter < GdcRestApiIterator
       values = label_values(element_identifier)
       element_id = values[element_value]
       if element_id.nil?
-        raise "The label #{element_identifier} doesn't contain the value \'#{element_value}\'. Please load correct data to the target project."
+        puts "The label #{element_identifier} doesn't contain the value \'#{element_value}\'. Please load correct data to the target project."
+        element_id = 0
       end
       content = content.gsub(s, "#{attr_uri}/elements?id=#{element_id}")
     }
