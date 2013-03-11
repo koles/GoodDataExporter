@@ -358,6 +358,7 @@ class GdcEraser < GdcExporter
 
   def initialize ()
     super({})
+    @accepted_categories += ['scheduledMail']
   end
 
   def replace_uris(pid, json)
@@ -408,7 +409,7 @@ class GdcEraser < GdcExporter
         end
       }
       if @accepted_categories.include? category
-        puts "Deleting #{identifier} - #{category}"
+        puts "Deleting #{identifier} - #{category} - #{uri}"
         GoodData::delete(uri)
       end
     rescue
