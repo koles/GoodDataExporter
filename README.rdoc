@@ -53,14 +53,14 @@ Here is the example +.gooddata+ file:
 
 == Most Frequent Scenario
 
-# Create your +.gooddata+ file in your home directory. Specify the GoodData *username*, *password*, and the *source* project keys.
-# Run the <tt>gdci show-multiple-labels</tt> command. This yields the list of all attributes with multiple labels. Identify the primary label for each attribute (remove all others) and put the resulting JSON into the +.gooddata+ file. Often you can remove all date and time dimensions from the list. Include them only if you have filters that reference specific days, months or years.
-# Create the metadata export directory and reference it in the +.gooddata+ file via the *dir* key.
-# Find out the identifier of the object that you want to export. This is usually a dashboard or report.
-# Run the <tt>gdci export ['identifier']</tt> command to export the object and all its dependencies to the export directory.
-# Identify the target project where you want to import the object and reference it in the +.gooddata+ file via the *target* key.
-# Run the <tt>gdci import ['identifier']</tt> command to export the object and all its dependencies to the export directory.
-# Check the target project for the imported objects.
+1. Create your +.gooddata+ file in your home directory. Specify the GoodData *username*, *password*, and the *source* project keys.
+2. Run the <tt>gdci show-multiple-labels</tt> command. This yields the list of all attributes with multiple labels. Identify the primary label for each attribute (remove all others) and put the resulting JSON into the +.gooddata+ file. Often you can remove all date and time dimensions from the list. Include them only if you have filters that reference specific days, months or years.
+3. Create the metadata export directory and reference it in the +.gooddata+ file via the *dir* key.
+4. Find out the identifier of the object that you want to export. This is usually a dashboard or report.
+5. Run the <tt>gdci export ['identifier']</tt> command to export the object and all its dependencies to the export directory.
+6. Identify the target project where you want to import the object and reference it in the +.gooddata+ file via the *target* key.
+7. Run the <tt>gdci import ['identifier']</tt> command to export the object and all its dependencies to the export directory.
+8. Check the target project for the imported objects.
 
 == Known Limitations
 
