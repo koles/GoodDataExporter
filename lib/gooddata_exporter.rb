@@ -125,10 +125,12 @@ class GdcRestApiIterator
   end
 
   def save_elements_to_file (name, content, out_dir)
+    puts "Saving attribute elements."
     File.open(out_dir+'/'+name+'.el','w') { |f| f.puts content}
   end
 
   def save_variables_to_file (name, content, out_dir)
+    puts "Saving variables."
     File.open(out_dir+'/'+name+'.var','w') { |f| f.puts content}
   end
 
@@ -297,7 +299,7 @@ class GdcExporter < GdcRestApiIterator
     content = content(identifier)
     content = preprocess_md_object(content)
     category = content.keys.first
-    puts "Exporting #{identifier} - #{category}"
+    puts "Exporting #{category} : #{identifier}"
     if @accepted_categories.include? category
       content_json = content.to_json
       content_json = replace_element_uris(pid, content_json)
@@ -396,7 +398,7 @@ class GdcEraser < GdcExporter
       @processed_identifiers += [identifier]
       content = content(identifier)
       category = content.keys.first
-      puts "Inspecting #{identifier} - #{category}"
+      puts "Inspecting #{category} : #{identifier}"
       uri = content[category]['meta']['uri']
       usedby = GoodData::get(uri.gsub('/obj/','/usedby/'))
       usedby['usedby']['nodes'].each {
@@ -409,11 +411,11 @@ class GdcEraser < GdcExporter
         end
       }
       if @accepted_categories.include? category
-        puts "Deleting #{identifier} - #{category} - #{uri}"
+        puts "Dropping #{category} : #{identifier}"
         GoodData::delete(uri)
       end
     rescue
-      puts "The #{category} #{identifier} has been deleted in previous rounds."
+      puts "The #{category} : #{identifier} has been deleted in previous rounds."
     end
   end
 
@@ -468,13 +470,14 @@ class GdcImporter < GdcRestApiIterator
 
   def save_md_object_to_gd(pid, json)
     identifier = json[json.keys.first]['meta']['identifier']
-    puts "Saving #{identifier}"
+    category = json[json.keys.first]['meta']['category']
     uri = ""
     begin
       uri = uri(identifier)
     rescue
       uri = ""
     end
+    puts "Saving #{category} : #{identifier}"
     if (uri.nil? or uri.size <=0)
       response = GoodData::post("/gdc/md/#{pid}/obj", json)
       uri = response["uri"]
