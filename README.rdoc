@@ -25,9 +25,9 @@ the command given. See the commands supported today below.
 
 <b>--dir [output-directory], -d [output-directory]</b> - Directory where the export/import stores/retrieves metadata objects.
 
-<b>--username [gooddata-username], -u [gooddata-username]</b> - Valid GoodData username. You can also store the username in the .gooddata JSON file located in the current directory, script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
+<b>--username [gooddata-username], -u [gooddata-username]</b> - Valid GoodData username.
 
-<b>--password [gooddata-password], -u [gooddata-password]</b> - Valid GoodData password. You can also store the password in the .gooddata JSON file located in the current directory, script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
+<b>--password [gooddata-password], -u [gooddata-password]</b> - Valid GoodData password.
 
 <b>--source [source-project], -s [source-project]</b> - An existing GoodData project where the metadata objects will be retrieved from.
 
@@ -50,6 +50,17 @@ Here is the example +.gooddata+ file:
     "target": "alobesvmeuze3hhwevp6juokl5ixjr16",
     "labels": {"attr.stage.name":"label.stage.name","attr.opportunity.id":"label.opportunity.id"}
   }
+
+== Most Frequent Scenario
+
+# Create your +.gooddata+ file in your home directory. Specify the GoodData *username*, *password*, and the *source* project keys.
+# Run the <tt>gdci show-multiple-labels</tt> command. This yields the list of all attributes with multiple labels. Identify the primary label for each attribute (remove all others) and put the resulting JSON into the +.gooddata+ file. Often you can remove all date and time dimensions from the list. Include them only if you have filters that reference specific days, months or years.
+# Create the metadata export directory and reference it in the +.gooddata+ file via the *dir* key.
+# Find out the identifier of the object that you want to export. This is usually a dashboard or report.
+# Run the <tt>gdci export ['identifier']</tt> command to export the object and all its dependencies to the export directory.
+# Identify the target project where you want to import the object and reference it in the +.gooddata+ file via the *target* key.
+# Run the <tt>gdci import ['identifier']</tt> command to export the object and all its dependencies to the export directory.
+# Check the target project for the imported objects.
 
 == Known Limitations
 
