@@ -5,7 +5,7 @@
 The tool reads from a source GoodData project and modify a target GoodData project. It can do many tricks depending on
 the command given. See the commands supported today below.
 
-+gdci \[options\] command+
+<tt>gdci \[options\] command</tt>
 
 === Commands
 
@@ -24,31 +24,28 @@ the command given. See the commands supported today below.
 -h, --help:
    show help
 
---dir [output-directory], -d [output-directory]:
-  Directory where the export/import stores/retrieves metadata objects.
+<b>--dir [output-directory], -d [output-directory]</b> - Directory where the export/import stores/retrieves metadata objects.
 
---username [gooddata-username], -u [gooddata-username]
-  Valid GoodData username. You can also store the username in the .gooddata JSON file located in the current directory,
+<b>--username [gooddata-username], -u [gooddata-username]</b> - Valid GoodData username. You can also store the username in the .gooddata JSON file located in the current directory,
   script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
 
---password [gooddata-password], -u [gooddata-password]
-  Valid GoodData password. You can also store the password in the .gooddata JSON file located in the current directory,
+<b>--password [gooddata-password], -u [gooddata-password]</b> - Valid GoodData password. You can also store the password in the .gooddata JSON file located in the current directory,
   script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
 
---source [source-project], -s [source-project]
-  An existing GoodData project where the metadata objects will be retrieved from.
+<b>--source [source-project], -s [source-project]</b> - An existing GoodData project where the metadata objects will be retrieved from.
 
---target [target-project], -t [target-project]
-  An existing GoodData project where the metadata objects will be stored.
+<b>--target [target-project], -t [target-project]</b> - An existing GoodData project where the metadata objects will be stored.
 
---overwrite, -o
-  Import overwrites existing objects. Default is false.
+<b>--overwrite, -o</b> - Import overwrites existing objects. Default is false.
 
---labels [attribute-primary-labels], -l [attribute-primary-labels]
-  Ruby hash that identifies the primary label for each attribute that has multiple labels. The primary label must
+<b>--labels [attribute-primary-labels], -l [attribute-primary-labels]</b> - Ruby hash that identifies the primary label for each attribute that has multiple labels. The primary label must
   uniquely identify every attribute element. (e.g. {'attr.user.userid'=>'label.user.userid', 'attr.account.id'=>'label.account.id'}
 
 == Known Limitations
+
+* The *export* command only exports the last report definition for each report. So all historical versions of the report are discarded.
+* The *export* command doesn't export Mandatory User Filters  (MUFs) and variable answers (specific variable values for different users). It only exports the variable's default values.
+* It still contains some bugs - report them in GitHub[https://github.com/zsvoboda/GoodDataExporter/issues]
 
 == Note on Patches/Pull Requests
  
