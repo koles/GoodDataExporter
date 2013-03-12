@@ -5,7 +5,7 @@
 The tool reads from a source GoodData project and modify a target GoodData project. It can do many tricks depending on
 the command given. See the commands supported today below.
 
-<tt>gdci \[options\] command</tt>
+<tt>gdci [options] command</tt>
 
 === Commands
 
