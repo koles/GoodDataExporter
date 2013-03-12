@@ -1,8 +1,54 @@
 = GoodData Exporter
 
-
 == Usage
 
+The tool reads from a source GoodData project and modify a target GoodData project. It can do many tricks depending on
+the command given. See the commands supported today below.
+
++gdci \[options\] command+
+
+=== Commands
+
+*show-multiple-labels* - lists all attributes with multiple labels
+
+*export* - exports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+*import* - imports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+*drop* - drops specified identifiers (e.g. drop ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+*drop-all* metrics | reports | projectDashboards - drops all instances of a specific object type
+
+=== Options
+
+-h, --help:
+   show help
+
+--dir [output-directory], -d [output-directory]:
+  Directory where the export/import stores/retrieves metadata objects.
+
+--username [gooddata-username], -u [gooddata-username]
+  Valid GoodData username. You can also store the username in the .gooddata JSON file located in the current directory,
+  script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
+
+--password [gooddata-password], -u [gooddata-password]
+  Valid GoodData password. You can also store the password in the .gooddata JSON file located in the current directory,
+  script directory, or your home directory. Example: {'username'':'you@gooddata.com', 'password':'password'}
+
+--source [source-project], -s [source-project]
+  An existing GoodData project where the metadata objects will be retrieved from.
+
+--target [target-project], -t [target-project]
+  An existing GoodData project where the metadata objects will be stored.
+
+--overwrite, -o
+  Import overwrites existing objects. Default is false.
+
+--labels [attribute-primary-labels], -l [attribute-primary-labels]
+  Ruby hash that identifies the primary label for each attribute that has multiple labels. The primary label must
+  uniquely identify every attribute element. (e.g. {'attr.user.userid'=>'label.user.userid', 'attr.account.id'=>'label.account.id'}
+
+== Known Limitations
 
 == Note on Patches/Pull Requests
  

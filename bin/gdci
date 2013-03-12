@@ -51,6 +51,10 @@ export - exports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOef
 
 import - imports specified identifiers (e.g. export ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
 
+drop - drops specified identifiers (e.g. drop ['adyD7xEmdhTx', 'agEEuYDOefRs', 'anANdK89eBKU'])
+
+drop-all metrics | reports | projectDashboards - drops all instances of a specific object type
+
 Options:
 
 -h, --help:
@@ -106,10 +110,16 @@ end
 
 command =  ARGV.shift
 identifiers = []
+all_objects = ''
 
-if(['import', 'export'].include? command)
+if(['import', 'export', 'drop'].include? command)
   identifiers = eval(ARGV.shift)
 end
+
+if(['drop-all'].include? command)
+  all_objects = ARGV.shift
+end
+
 
 o = options
 
@@ -189,6 +199,14 @@ case command
     GoodData.project = target_project
     importer = GdcImporter.new(primary_labels)
     importer.import(target_project, identifiers, overwrite, out_dir)
+  when 'drop'
+    GoodData.project = target_project
+    eraser = GdcEraser.new()
+    eraser.drop(target_project, identifiers)
+  when 'drop-all'
+    GoodData.project = target_project
+    eraser = GdcEraser.new()
+    eraser.drop_all_objects(target_project, all_objects)
   else
     puts "Unknown command #{command}! Use --help to list the available commands."
 end
