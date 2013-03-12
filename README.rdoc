@@ -21,7 +21,7 @@ the command given. See the commands supported today below.
 
 === Options
 
-<b>-h, --help</b> - show help
+<b>--help, -h</b> - Shows help.
 
 <b>--dir [output-directory], -d [output-directory]</b> - Directory where the export/import stores/retrieves metadata objects.
 
