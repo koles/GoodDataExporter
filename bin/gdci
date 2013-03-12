@@ -159,7 +159,7 @@ if (command.eql?('export') or command.eql?('show-multiple-labels')) and (source_
   end
 end
 
-if (command.eql?('import')) and (target_project.nil? or target_project.size <= 0)
+if (command.eql?('import') or command.eql?('drop') or command.eql?('drop-all')) and (target_project.nil? or target_project.size <= 0)
   puts "INFO: Parameter --target not specified. Looking in config file."
   target_project = o['target']
   if target_project.nil? or target_project.size <= 0
