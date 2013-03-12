@@ -82,7 +82,7 @@ Options:
 
 --labels [attribute-primary-labels], -l [attribute-primary-labels]
   Ruby hash that identifies the primary label for each attribute that has multiple labels. The primary label must
-  uniquely identify every attribute element. (e.g. {'attr.user.userid'=>'label.user.userid', 'attr.account.id'=>'label.account.id'}
+  uniquely identify every attribute element. (e.g. {'attr.user.userid':'label.user.userid', 'attr.account.id':'label.account.id'}
 "
     when '--dir'
       if File.exists?(arg)
@@ -103,7 +103,7 @@ Options:
       target_project = arg
     when '--labels'
       if (not arg.nil?) and arg.size > 0
-        primary_labels = eval(arg)
+        primary_labels = JSON.parse(arg)
       end
   end
 end
@@ -170,7 +170,7 @@ end
 
 if primary_labels.nil? or primary_labels.size <= 0
   puts "INFO: Parameter --labels not specified. Looking in config file."
-  primary_labels = eval(o['labels'])
+  primary_labels = o['labels']
   if primary_labels.nil? or primary_labels.size <= 0
     puts "INFO: Parameter --labels not found in config file. Using empty mapping as default."
   end
@@ -183,14 +183,19 @@ case command
     GoodData.project = source_project
     exporter = GdcExporter.new(primary_labels)
     attributes = exporter.attributes_with_multiple_labels(source_project)
+    result = ''
     attributes.each {
       |key,values|
-      puts "#{key}:"
+      result += ',' unless result.size == 0
+      values_list = ''
       values.each {
         |v|
-        puts "  #{v}"
+        values_list += ' | ' unless values_list.size == 0
+        values_list += "'#{v}'"
       }
+      result += "\n'#{key}':#{values_list}"
     }
+    puts "{#{result}\n}"
   when 'export'
     GoodData.project = source_project
     exporter = GdcExporter.new(primary_labels)
