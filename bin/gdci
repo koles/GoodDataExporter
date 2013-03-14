@@ -8,14 +8,13 @@ require 'getoptlong'
 
 def options
   config_file_locations = ['.gooddata', File.expand_path(File.dirname(File.dirname(__FILE__)))+'/.gooddata', ENV['HOME']+'/.gooddata']
-  config_file_locations.each {
-    |path|
+  config_file_locations.each do |path|
     if File.exists?(path)
       opt = JSON.parse(open(path).read())
       puts "Retrieving options from '#{path}'."
       return opt
     end
-  }
+  end
 end
 
 opts = GetoptLong.new(
@@ -181,20 +180,18 @@ GoodData::connect(username, password)
 case command
   when 'show-multiple-labels'
     GoodData.project = source_project
-    exporter = GdcExporter.new(primary_labels)
-    attributes = exporter.attributes_with_multiple_labels(source_project)
+    exporter = GdcExporter.new primary_labels
+    attributes = exporter.attributes_with_multiple_labels source_project
     result = ''
-    attributes.each {
-      |key,values|
+    attributes.each do |key,values|
       result += ',' unless result.size == 0
       values_list = ''
-      values.each {
-        |v|
+      values.each do |v|
         values_list += ' | ' unless values_list.size == 0
         values_list += "'#{v}'"
-      }
+      end
       result += "\n'#{key}':#{values_list}"
-    }
+    end
     puts "{#{result}\n}"
   when 'export'
     GoodData.project = source_project
@@ -215,8 +212,3 @@ case command
   else
     puts "Unknown command #{command}! Use --help to list the available commands."
 end
-
-
-
-
-

@@ -4,7 +4,6 @@ require 'gooddata/client'
 require 'json'
 require 'logger'
 
-
 class GdcRestApiIterator
 
   def initialize()
@@ -22,27 +21,25 @@ class GdcRestApiIterator
   def attributes_with_multiple_labels(pid)
     attributes_with_multiple_labels = {}
     response = GoodData::get("/gdc/md/#{pid}/query/attributes")
-    response['query']['entries'].each {
-        |a|
+    response['query']['entries'].each do |a|
       uri = a['link']
       identifier = identifier(uri)
       label_identifiers = attribute_label_identifiers(identifier)
       if label_identifiers.size > 1
         attributes_with_multiple_labels[identifier] = label_identifiers
       end
-    }
+    end
     return attributes_with_multiple_labels
   end
 
   def object_identifiers(pid, object_type)
     objects = []
     response = GoodData::get("/gdc/md/#{pid}/query/#{object_type}")
-    response['query']['entries'].each {
-        |m|
+    response['query']['entries'].each do |m|
       uri = m['link']
       identifier = identifier(uri)
       objects += [identifier]
-    }
+    end
     return objects
   end
 
@@ -93,7 +90,7 @@ class GdcRestApiIterator
   end
 
   def identifier(uri)
-    i=@uri_to_identifier[uri]
+    i =@uri_to_identifier[uri]
     if(i.nil?)
       att = GoodData::MdObject[uri]
       cache_identifier_uri(att.identifier, uri)
@@ -110,7 +107,7 @@ class GdcRestApiIterator
       md_obj = GoodData::MdObject[identifier]
       cache_identifier_uri(md_obj.identifier, md_obj.uri)
       category = md_obj.meta['category']
-      obj = {category=>{'meta'=>md_obj.meta, 'content'=>md_obj.content}}
+      obj = {category =>{'meta'=> md_obj.meta, 'content'=>md_obj.content}}
       @content_by_identifier[identifier] = obj
       return obj
     end
@@ -134,13 +131,13 @@ class GdcRestApiIterator
     File.open(out_dir+'/'+name+'.var','w') { |f| f.puts content}
   end
 
-  # returns the pair [identifier, id] from a single element uri (/gdc/md/<project>/obj/<obj>/elements?id=<id>)
+  # returns the pair [identifier, id] from a single element uri (/gdc/md/<project>/obj/<obj>/elements?id =<id>)
   def identifier_id_pair_from_element_uri(pid, eu)
     peu = eu.gsub("gdc/md/#{pid}/obj/","")
     peu = strip_enclosing_chars_from_element_uri(peu)
     id = peu.scan(/[0-9]+/)[1]
     uri = eu.gsub(/\/elements/,"")
-    uri = uri.gsub(/\?id=[0-9]+/,"")
+    uri = uri.gsub(/\?id =[0-9]+/,"")
     uri = strip_enclosing_chars_from_element_uri(uri)
     identifier = identifier(uri)
     return [identifier, id]
@@ -167,28 +164,27 @@ class GdcRestApiIterator
   # returns label value for a specified id
   def label_element_value (identifier, id)
     elements_uri = label_elements_uri(identifier)
-    response = GoodData::get("#{elements_uri}?id=#{id}")
+    response = GoodData::get("#{elements_uri}?id =#{id}")
     if !(response['attributeElements']['elements'].empty?)
       return response['attributeElements']['elements'][0]['title']
     else
-      puts "WARNING: label #{identifier} doesn't contain element id=#{id}."
+      puts "WARNING: label #{identifier} doesn't contain element id =#{id}."
       puts "Grep the output directory for '%element%#{label_attribute(identifier)},#{id}%' to find all objects that contains the invalid IDs."
     end
   end
 
-  # returns all {value=>id} pairs of a label
+  # returns all {value => id} pairs of a label
   def label_element_values (identifier)
     value_to_uri = {}
     elements_uri = label_elements_uri(identifier)
     response = GoodData::get(elements_uri)
     label_uri = response['attributeElements']['elementsMeta']['attributeDisplayForm']
-    if !(response['attributeElements']['elements'].empty?)
+    if !response['attributeElements']['elements'].empty?
       values = response['attributeElements']['elements']
-      values.each {
-          |pair|
+      values.each do |pair|
         uri = pair['uri']
-        value_to_uri[pair['title']] = uri.gsub(/^.*?\?id=/,'')
-      }
+        value_to_uri[pair['title']] = uri.gsub(/^.*?\?id =/,'')
+      end
     else
       puts "WARNING: label #{identifier} doesn't contain any elements"
     end
@@ -202,7 +198,7 @@ class GdcRestApiIterator
       when label_identifiers.size > 1
         # there are multiple labels per
         label_identifier = @primary_labels[identifier]
-        if label_identifier.nil? or label_identifier.length <=0
+        if label_identifier.nil? or label_identifier.length <= 0
           raise "The attribute #{identifier} has multiple labels. You must specify the primary label for it."
         end
       when label_identifiers.size == 1
@@ -256,41 +252,36 @@ class GdcExporter < GdcRestApiIterator
   end
 
   def export(pid, identifiers, out_dir)
-    identifiers.each {
-        |i|
-      export_object(pid, i, out_dir)
-    }
+    identifiers.each { |i| export_object pid, i, out_dir }
     retrieve_prompt_items(pid, out_dir)
     retrieve_elements(pid, out_dir)
   end
 
   def replace_element_uris(pid, json)
-    element_uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+\/elements\?id=[0-9]+["|\]]/)
+    element_uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+\/elements\?id =[0-9]+["|\]]/)
     element_uris = element_uris.uniq
-    element_uris.each {
-      |eu|
+    element_uris.each do |eu|
       first_char = eu[0]
       last_char = eu[-1]
       @element_uris += [strip_enclosing_chars_from_element_uri(eu)]
       json = json.gsub(eu, "#{first_char}%element%#{identifier_id_pair_from_element_uri(pid, eu).join(',')}%#{last_char}")
-    }
+    end
     return json
   end
 
   def replace_uris(pid, json, out_dir)
     uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+["|\]]/)
     uris = uris.uniq
-    uris.each {
-      |uri|
+    uris.each do |uri|
       first_char = uri[0]
       last_char = uri[-1]
       stripped_uri = strip_enclosing_chars_from_element_uri(uri)
       id = identifier(stripped_uri)
       json = json.gsub(uri, "#{first_char}%identifier%#{id}%#{last_char}")
-      if !(@processed_identifiers.include? id)
+      unless @processed_identifiers.include? id
         export_object(pid, id, out_dir)
       end
-    }
+    end
     return json
   end
 
@@ -311,11 +302,10 @@ class GdcExporter < GdcRestApiIterator
   def retrieve_prompt_items(pid, out_dir)
     variables_array = []
     prompt_uris = @prompt_identifiers.uniq.map {|i| uri(i)}
-    variables_search = {'variablesSearch'=>{'variables'=>prompt_uris,'context'=>[]}}
+    variables_search = {'variablesSearch'=>{'variables'=> prompt_uris,'context'=>[]}}
     result = GoodData::post("/gdc/md/#{pid}/variables/search", variables_search)
     result = result['variables'].select {|e| e['level'].eql?('project')}
-    result.each {
-        |r|
+    result.each do |r|
       r.delete('related')
       r.delete('tree')
       r.delete('objects')
@@ -323,9 +313,9 @@ class GdcExporter < GdcRestApiIterator
       json = r.to_json
       json = replace_element_uris(pid, json)
       json = replace_uris(pid, json, out_dir)
-      variables_array += [JSON.parse(json)]
-    }
-    variables = {'variables'=>variables_array}
+      variables_array += [ JSON.parse json ]
+    end
+    variables = {'variables'=> variables_array }
     save_variables_to_file('variables', variables.to_json, out_dir)
   end
 
@@ -340,17 +330,16 @@ class GdcExporter < GdcRestApiIterator
   def retrieve_elements(pid, out_dir)
     @element_uris = @element_uris.uniq
     element_values = {}
-    @element_uris.each {
-        |eu|
+    @element_uris.each do |eu|
       identifier, id = identifier_id_pair_from_element_uri(pid, eu)
       label_identifier = primary_label(identifier)
       label_value = label_element_value(label_identifier, id)
       if element_values[label_identifier].nil?
-        element_values[label_identifier] = {id=>label_value}
+        element_values[label_identifier] = { id => label_value }
       else
         element_values[label_identifier][id] = label_value
       end
-    }
+    end
     save_elements_to_file('used_elements', element_values.to_json, out_dir)
   end
 
@@ -366,15 +355,14 @@ class GdcEraser < GdcExporter
   def replace_uris(pid, json)
     uris = json.scan(/["|\[]\/gdc\/md\/#{pid}\/obj\/[0-9]+["|\]]/)
     uris = uris.uniq
-    uris.each {
-        |uri|
+    uris.each do |uri|
       stripped_uri = strip_enclosing_chars_from_element_uri(uri)
       id = identifier(stripped_uri)
       json = json.gsub(stripped_uri, "%identifier%#{id}%")
-      if !(@processed_identifiers.include? id)
+      unless @processed_identifiers.include? id
         drop_object(pid, id)
       end
-    }
+    end
     return json
   end
 
@@ -387,10 +375,7 @@ class GdcEraser < GdcExporter
   end
 
   def drop(pid, identifiers)
-    identifiers.each {
-      |i|
-      drop_object(pid, i)
-    }
+    identifiers.each { |i| drop_object pid, i }
   end
 
   def drop_object(pid, identifier)
@@ -401,15 +386,14 @@ class GdcEraser < GdcExporter
       puts "Inspecting #{category} : #{identifier}"
       uri = content[category]['meta']['uri']
       usedby = GoodData::get(uri.gsub('/obj/','/usedby/'))
-      usedby['usedby']['nodes'].each {
-        |node|
+      usedby['usedby']['nodes'].each do |node|
         parent_uri = node['link']
         parent_category = node['category']
         if @accepted_categories.include? parent_category
-          parent_identifier = identifier(parent_uri)
+          parent_identifier = identifier parent_uri
           drop_object(pid, parent_identifier) unless @processed_identifiers.include? parent_identifier
         end
-      }
+      end
       if @accepted_categories.include? category
         puts "Dropping #{category} : #{identifier}"
         GoodData::delete(uri)
@@ -430,7 +414,7 @@ class GdcImporter < GdcRestApiIterator
   # is used for translation of an element id to a (unique) value
   # in other word this si the label that uniquely identifies every value of the attribute
   # no primary label is necessary for most attributes that have just one label
-  def initialize (primary_labels)
+  def initialize(primary_labels)
     @element_values = {}
     @element_ids = {}
     super()
@@ -458,7 +442,7 @@ class GdcImporter < GdcRestApiIterator
     return identifier_value.split(',')
   end
 
-  def remove_object_keys (content)
+  def remove_object_keys(content)
     json = JSON.parse(content)
     json[json.keys.first]['meta'].delete('uri')
     json[json.keys.first]['meta'].delete('created')
@@ -478,13 +462,14 @@ class GdcImporter < GdcRestApiIterator
       uri = ""
     end
     puts "Saving #{category} : #{identifier}"
-    if (uri.nil? or uri.size <=0)
+    if (uri.nil? or uri.size <= 0)
       response = GoodData::post("/gdc/md/#{pid}/obj", json)
       uri = response["uri"]
       response = GoodData::get(uri)
       # Here the object has auto generated identifier, we want to update it
       # we have to retrieve it with an extra GET to not cache it with the wrong identifier
-      response[response.keys.first]['meta']['identifier'] = json[response.keys.first]['meta']['identifier']
+      first = response.keys.first
+      response[first]['meta']['identifier'] = json[first]['meta']['identifier']
     else
       response = json
     end
@@ -494,27 +479,21 @@ class GdcImporter < GdcRestApiIterator
 
   def replace_identifiers(pid, content, overwrite, out_dir)
     identifier_macros = content.scan(/\%identifier\%.*?\%/).uniq
-    identifier_macros.each {
-        |s|
+    identifier_macros.each do |s|
       inner_identifier = identifier_from_macro(s)
       inner_uri = ""
-      begin
-        inner_uri = uri(inner_identifier)
-      rescue
-        inner_uri = ""
-      end
+      begin inner_uri = uri(inner_identifier) ; rescue ; end
       if(inner_uri.nil? or inner_uri.size() <= 0 or overwrite)
         inner_uri = import_object(pid, inner_identifier, overwrite, out_dir)
       end
       content = content.gsub(s, inner_uri)
-    }
+    end
     return content
   end
 
   def replace_elements(content)
     element_macros = content.scan(/\%element\%.*?\%/).uniq
-    element_macros.each {
-        |s|
+    element_macros.each do |s|
       attr_identifier, id = identifier_value_from_macro(s)
       attr_uri = uri(attr_identifier)
       element_identifier = primary_label(attr_identifier)
@@ -525,17 +504,14 @@ class GdcImporter < GdcRestApiIterator
         puts "The label #{element_identifier} doesn't contain the value \'#{element_value}\'. Please load correct data to the target project."
         element_id = 0
       end
-      content = content.gsub(s, "#{attr_uri}/elements?id=#{element_id}")
-    }
+      content = content.gsub(s, "#{attr_uri}/elements?id =#{element_id}")
+    end
     return content
   end
 
   def import(pid, identifiers, overwrite, out_dir)
-    @element_ids = JSON.parse(File.open(File.join(out_dir,"used_elements.el"), "rb") {|f| f.read})
-    identifiers.each {
-        |e|
-      import_object(pid, e, overwrite, out_dir)
-    }
+    @element_ids = JSON.parse(File.open(File.join(out_dir,"used_elements.el"), "rb") { |f| f.read })
+    identifiers.each { |e| import_object(pid, e, overwrite, out_dir) }
     import_variable_items(pid, overwrite, out_dir)
   end
 
@@ -549,8 +525,8 @@ class GdcImporter < GdcRestApiIterator
     end
     filename = File.join(out_dir,"#{identifier}.md")
     if(uri.nil? or uri.size <= 0 or (overwrite and File.exists?(filename) and (not @saved_identifiers.include?(identifier))))
-      content = File.open(filename, "rb") {|f| f.read}
-      content = remove_object_keys (content)
+      content = File.open(filename, "rb") { |f| f.read}
+      content = remove_object_keys content
       content = replace_identifiers(pid, content, overwrite, out_dir)
       content = replace_elements(content)
       uri = save_md_object_to_gd(pid, JSON.parse(content))
@@ -561,8 +537,7 @@ class GdcImporter < GdcRestApiIterator
 
   def import_variable_items(pid, overwrite, out_dir)
     content = JSON.parse(File.open(File.join(out_dir,"variables.var"), "rb") {|f| f.read})
-    variables = content['variables'].each {
-        |v|
+    variables = content['variables'].each do |v|
       v['related']="/gdc/projects/#{pid}"
       content = {'variables'=>[v]}.to_json
       content = replace_identifiers(pid, content, overwrite, out_dir)
@@ -572,8 +547,7 @@ class GdcImporter < GdcRestApiIterator
       rescue
         puts "Variable answer already exists!"
       end
-    }
+    end
   end
-
 
 end
